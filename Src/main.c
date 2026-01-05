@@ -1,24 +1,11 @@
 #include <stdint.h>
 #include <stdio.h>
-
-/* some stack memory calculations */
-#define SIZE_TASK_STACK         1024U
-#define SIZE_SCHED_STACK        1024U
-
-#define SRAM_START              0X20000000U
-#define SRAM_SIZE               ((128) * (1024))
-#define SRAM_END                ((SRAM_START) + (SRAM_SIZE))
-
-#define T1_STACK_START          SRAM_END
-#define T2_STACK_START          ((SRAM_END) - (1 * SRAM_SIZE))
-#define T3_STACK_START          ((SRAM_END) - (2 * SRAM_SIZE))
-#define T4_STACK_START          ((SRAM_END) - (3 * SRAM_SIZE))
-#define SCHED_STACK_START       ((SRAM_END) - (4 * SRAM_SIZE))
+#include "main.h"
 
 
-#define TICK_HZ                 1000U
-#define HSI_CLK_FREQ            16000000U   // 16 MHz
-#define SYSTICK_TIM_CLK         HSI_CLK_FREQ
+/* This is a global array that holds the PSP of different tasks */
+uint32_t psp_of_tasks[MAX_TASKS] = {T1_STACK_START, T2_STACK_START, T3_STACK_START, T4_STACK_START};
+uint32_t task_handlers[MAX_TASKS];
 
 
 void task1_handler(void);
@@ -27,9 +14,20 @@ void task3_handler(void);
 void task4_handler(void);
 
 void init_systick_timer(uint32_t tick_hz);
+__attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack);
+void init_task_stack(void);
+
 
 int main(void){
-    
+    init_scheduler_stack(SCHED_STACK_START);
+
+    task_handlers[0] = (uint32_t) task1_handler;
+    task_handlers[1] = (uint32_t) task2_handler;
+    task_handlers[2] = (uint32_t) task3_handler;
+    task_handlers[3] = (uint32_t) task4_handler;
+
+    init_task_stack();
+
     init_systick_timer(TICK_HZ);
     /* Loop forever */
 	for(;;);
@@ -85,5 +83,39 @@ void init_systick_timer(uint32_t tick_hz){
 }
 
 void SysTick_Handler(void){
+    
+}
+
+
+// This is a naked function so no prologue and epilogue. That's why we have to write this
+__attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack){
+    __asm volatile("MSR MSP, %0" :: "r" (sched_top_of_stack) : );
+    __asm volatile("BX LR");  // this copies the value of LR into PC
+
+}
+
+void init_task_stack(void){
+    uint32_t *pPSP;
+
+    for (int i = 0; i < MAX_TASKS; i++){
+        pPSP = (uint32_t *) psp_of_tasks[i];
+        // stack model is full descending so it decrement first then stores the value
+        pPSP--;
+        *pPSP = DUMMY_XPSR; // 0x01000000U
+
+        pPSP--;  // PC
+        *pPSP = task_handlers[i];
+
+        pPSP--;  // LR
+        *pPSP = 0xFFFFFFFD;
+
+        for (int j = 0; j < 13; j++){
+            pPSP--;
+            *pPSP = 0;
+        }
+
+        psp_of_tasks[i] = (uint32_t) pPSP; // preserve the value of PSP
+        
+    }
     
 }
