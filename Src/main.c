@@ -23,6 +23,8 @@ void init_systick_timer(uint32_t tick_hz);
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack);
 void init_task_stack(void);
 
+void save_psp_value(uint32_t stack_addr);
+void update_next_task(void);
 
 int main(void){
 
@@ -99,7 +101,49 @@ void init_systick_timer(uint32_t tick_hz){
 }
 
 void SysTick_Handler(void){
+    /* save the context of the current task */
+
+    // 1. get current running task PSP value
+    __asm volatile("MRS R0, PSP");
+
+    // 2. using the PSP value to store SF2 (R4-R11)
+    __asm volatile("STMDB R0!, {R4-R11}");
+    /* 
+    STMDB, STMEA Rn{!}, reglist Store Multiple registers, decrement before
+    Rn Specifies the register on which the memory addresses are based.
+    ! Is an optional writeback suffix. If ! is present the final address, that is loaded from or stored to, is written back into Rn.
+    */
+    /* we can't use push instruction here, because this is a handler.
+    If we use push instruction what happens? MSP will be affected. Because, in the handler mode processor is always using MSP
+    Here, we have to store the register values into task private stack, isn't it? which is referenced by the value of R0. */
+
+    // 3. save the current value of PSP
+    __asm volatile("BL save_psp_value");
+
+
+
+    /* retrieve the context of next task */
+    // 1. decide next task to run
+    __asm volatile("BL update_next_task");
+
+    // 2. get its past PSP value
+    __asm volatile("BL get_psp_value");
+
+    // 3. using that PSP value retrieve SF2 (R4-R11)
+    __asm volatile("LDMIA R0!, {R4-R11}");
+    /*  LDMFD, LDMIA     Rn{!}, reglist      Load Multiple registers, increment after
+        IA Increment address After each access. This is the default.
+        DB Decrement address Before each access.
+    */
+
+    // 4. update PSP and exit
+    __asm volatile("MSR PSP, R0");
+
+    /* 
+    NOTE: the exception exit sequences will take place automatically by the processor and it tries to fetch the SF1, that is stack frame 1 where we have stored the return address and other things. Reference for that stack frame 1 is nothing but stack address of the next updated task. That's why, we have modified the PSP here. The PSP got modified here. Now, the PSP is pointing to the stack area of next updated task. That's why, execution will go to the next task.
     
+    */ 
+
 }
 
 
@@ -147,6 +191,14 @@ void enable_processor_faults(void){
 	// *pSHCSR |= (0x7 << 16); // it enables all above mention three faults
 }
 
+void save_psp_value(uint32_t current_psp_val){
+    psp_of_tasks[current_task] = current_psp_val;
+}
+
+void update_next_task(void){
+    current_task++;
+    current_task %= MAX_TASKS;
+}
 
 
 uint32_t get_psp_value(void){
