@@ -7,11 +7,17 @@
 uint32_t psp_of_tasks[MAX_TASKS] = {T1_STACK_START, T2_STACK_START, T3_STACK_START, T4_STACK_START};
 uint32_t task_handlers[MAX_TASKS];
 
+/* denotes the current task which is running in the CPU */
+uint8_t current_task = 0; // task 1 is running
+
 
 void task1_handler(void);
 void task2_handler(void);
 void task3_handler(void);
 void task4_handler(void);
+
+void enable_processor_faults(void);
+__attribute__((naked)) void switch_sp_to_psp(void);
 
 void init_systick_timer(uint32_t tick_hz);
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack);
@@ -19,6 +25,9 @@ void init_task_stack(void);
 
 
 int main(void){
+
+    enable_processor_faults();
+
     init_scheduler_stack(SCHED_STACK_START);
 
     task_handlers[0] = (uint32_t) task1_handler;
@@ -29,8 +38,15 @@ int main(void){
     init_task_stack();
 
     init_systick_timer(TICK_HZ);
+
+    switch_sp_to_psp();
+
+    // this task is run with PSP as stack pointer
+    task1_handler();
+
+
     /* Loop forever */
-	for(;;);
+	for(;;);    // control will never reaches to this for loop because the task will get trapped inside the while loop
 }
 
 
@@ -118,4 +134,56 @@ void init_task_stack(void){
         
     }
     
+}
+
+
+void enable_processor_faults(void){
+    // enable all configurable exceptions like usage fault, mem manage fault and bus fault
+ 	uint32_t *pSHCSR = (uint32_t *) 0xE000ED24;
+	*pSHCSR |= (1 << 16);		// mem manage fault
+	*pSHCSR |= (1 << 17);		// bus fault
+	*pSHCSR |= (1 << 18);		// usage fault
+
+	// *pSHCSR |= (0x7 << 16); // it enables all above mention three faults
+}
+
+
+
+uint32_t get_psp_value(void){
+
+    return psp_of_tasks[current_task];
+}
+
+__attribute__((naked)) void switch_sp_to_psp(void){
+    // 1. initialize the PSP with task1 stack start address
+
+    __asm volatile("PUSH {LR}"); // preserves LR which connects back to main()
+
+    // get the value of PSP of current task
+    __asm volatile("BL get_psp_value");
+    // NOTE: shouldn't use only B that is just branch to get_psp_value we should branch with link because, we have to come back to this function. That's why we have to use BL here
+    /* When it goes to this function the return value of stored in R0 according to the procedure call standards
+    the initial stack address of the current task will be stored in R0
+    */
+
+
+    __asm volatile("MSR PSP, R0");  // initialize PSP
+    __asm volatile("POP {LR}");
+    /* when we use BL (branch with link) the value of LR will be corrupted
+    because this function is called from main, LR is holding some value After this function it has to go back to main, that
+    is done through the value of LR. Because LR is a link register. It connects back to the main. But
+    here we are again moving to this function here.
+
+    So, LR value is corrupted. That's a reason you have to push LR here, you have to save LR. Because,
+    we want that later. I would push register set should be given in these brackets, that is LR.
+    You got the PSP value, you came back here,
+    you programmed PSP and then pop LR. We have to pop it back.
+    */
+
+    
+    // 2. change SP to PSP using CONTROL register
+    __asm volatile("MOV R0, #0x02");
+    __asm volatile("MSR CONTROL, R0");
+    __asm volatile("BX LR");
+
 }
