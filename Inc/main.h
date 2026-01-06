@@ -15,11 +15,13 @@
 #define SRAM_SIZE               ((128) * (1024))
 #define SRAM_END                ((SRAM_START) + (SRAM_SIZE))
 
-#define T1_STACK_START          SRAM_END
-#define T2_STACK_START          ((SRAM_END) - (1 * SRAM_SIZE))
-#define T3_STACK_START          ((SRAM_END) - (2 * SRAM_SIZE))
-#define T4_STACK_START          ((SRAM_END) - (3 * SRAM_SIZE))
-#define SCHED_STACK_START       ((SRAM_END) - (4 * SRAM_SIZE))
+#define T1_STACK_START   SRAM_END
+#define T2_STACK_START   (SRAM_END - (1 * SIZE_TASK_STACK))
+#define T3_STACK_START   (SRAM_END - (2 * SIZE_TASK_STACK))
+#define T4_STACK_START   (SRAM_END - (3 * SIZE_TASK_STACK))
+
+#define SCHED_STACK_START (SRAM_END - (4 * SIZE_TASK_STACK))
+
 
 
 #define TICK_HZ                 1000U
