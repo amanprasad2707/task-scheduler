@@ -29,4 +29,8 @@
 #define SYSTICK_TIM_CLK         HSI_CLK_FREQ
 
 
+#define TASK_STATE_RUNNING      0x00
+#define TASK_STATE_BLOCKED      0xFF
+
+
 #endif /* MAIN_H_ */
