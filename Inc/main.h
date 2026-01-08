@@ -4,7 +4,10 @@
 
 #define MAX_TASKS               5 // 4 user tasks and 1 idle task
 
-#define DUMMY_XPSR      0x01000000U
+#define DUMMY_XPSR              0x01000000U
+
+#define INTERRUPT_DISABLE()    do{  __asm volatile("MOV R0, #0x1"); __asm volatile("MSR PRIMASK, R0"); } while (0)
+#define INTERRUPT_ENABLE()    do{  __asm volatile("MOV R0, #0x0"); __asm volatile("MSR PRIMASK, R0"); } while (0)
 
 
 /* some stack memory calculations */

@@ -304,11 +304,25 @@ void schedule(void){
 }
 
 void task_delay(uint32_t tick_count){
-    if(current_task){  // if current task is 0 which means it is idle task so don't do anything
+
+    INTERRUPT_DISABLE();
+
+    /*
+     * We are changing shared scheduler data here.
+     * If an interrupt happens in the middle of this code,
+     * the scheduler may see incomplete or wrong values.
+     *
+     * So we temporarily disable interrupts to make sure
+     * this update happens safely and completely.
+     */
+
+    if(current_task){  // task 0 = idle task
         user_tasks[current_task].block_count = g_tick_count + tick_count;
         user_tasks[current_task].current_state = TASK_STATE_BLOCKED;
         schedule();
     }
+
+    INTERRUPT_ENABLE();
 }
 
 
