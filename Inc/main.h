@@ -2,7 +2,7 @@
 #define MAIN_H_
 
 
-#define MAX_TASKS               4
+#define MAX_TASKS               5 // 4 user tasks and 1 idle task
 
 #define DUMMY_XPSR      0x01000000U
 
@@ -15,12 +15,13 @@
 #define SRAM_SIZE               ((128) * (1024))
 #define SRAM_END                ((SRAM_START) + (SRAM_SIZE))
 
-#define T1_STACK_START   SRAM_END
-#define T2_STACK_START   (SRAM_END - (1 * SIZE_TASK_STACK))
-#define T3_STACK_START   (SRAM_END - (2 * SIZE_TASK_STACK))
-#define T4_STACK_START   (SRAM_END - (3 * SIZE_TASK_STACK))
+#define T1_STACK_START          SRAM_END
+#define T2_STACK_START          (SRAM_END - (1 * SIZE_TASK_STACK))
+#define T3_STACK_START          (SRAM_END - (2 * SIZE_TASK_STACK))
+#define T4_STACK_START          (SRAM_END - (3 * SIZE_TASK_STACK))
+#define IDLE_STACK_START        (SRAM_END - (4 * SIZE_TASK_STACK))
 
-#define SCHED_STACK_START (SRAM_END - (4 * SIZE_TASK_STACK))
+#define SCHED_STACK_START       (SRAM_END - (5 * SIZE_TASK_STACK))
 
 
 
@@ -29,8 +30,11 @@
 #define SYSTICK_TIM_CLK         HSI_CLK_FREQ
 
 
-#define TASK_STATE_RUNNING      0x00
+#define TASK_STATE_READY      0x00
 #define TASK_STATE_BLOCKED      0xFF
+
+
+volatile uint32_t *pICSR = (volatile uint32_t *) 0xE000ED04U;
 
 
 #endif /* MAIN_H_ */
