@@ -1,6 +1,7 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+#include "regs.h"
 
 #define MAX_TASKS               5 // 4 user tasks and 1 idle task
 
@@ -37,7 +38,7 @@
 #define TASK_STATE_BLOCKED      0xFF
 
 
-volatile uint32_t *pICSR = (volatile uint32_t *) 0xE000ED04U;
+#define EXC_RETURN_THREAD_PSP_NOFP        0xFFFFFFFD
 
 
 #endif /* MAIN_H_ */

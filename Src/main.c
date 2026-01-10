@@ -28,6 +28,8 @@ __attribute__((naked)) void switch_sp_to_psp(void);
 void init_systick_timer(uint32_t tick_hz);
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack);
 void init_task_stack(void);
+void schedule(void);
+
 
 void save_psp_value(uint32_t stack_addr);
 void update_next_task(void);
@@ -106,21 +108,25 @@ void task4_handler(void){
 
 
 void init_systick_timer(uint32_t tick_hz){
-    uint32_t *pSRVR = (uint32_t *) 0xE000E014; // systick relaod value register address
-    uint32_t *pSCSR = (uint32_t *) 0xE000E010; // systick control and status register address
-    uint32_t count_value = (SYSTICK_TIM_CLK / tick_hz) - 1;
+    uint32_t reload;
 
-    // clear the value of SRVR
-    *pSRVR &= ~(0x00FFFFFF);
+    /* Calculate reload value */
+    reload = (SYSTICK_TIM_CLK / tick_hz) - 1U;
 
-    // load the value in the SRVR
-    *pSRVR |= count_value;
+    /* Load reload value */
+    SYST_RVR = reload;
 
-    // do some systick config
-    *pSCSR |= (1 << 1); // enables systick exception request
-    *pSCSR |= (1 << 2); // sets the processors clock source (not external)
-    *pSCSR |= (1 << 0); // enables the counter
+    /* Clear current value register */
+    SYST_CVR = 0U;
+
+    /* Configure and start SysTick
+     * - Processor clock
+     * - Enable SysTick interrupt
+     * - Enable SysTick counter
+     */
+    SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_TICKINT  | SYST_CSR_ENABLE;
 }
+
 
 /*
  * PendSV_Handler
@@ -221,8 +227,7 @@ void SysTick_Handler(void){
     update_global_tick_count();
     unblock_tasks();
 
-    // pend the PendSV exception
-    *pICSR |= (1 << 28);
+    schedule();
 }
 
 
@@ -302,13 +307,14 @@ void init_task_stack(void){
 
 
 void enable_processor_faults(void){
-    // enable all configurable exceptions like usage fault, mem manage fault and bus fault
- 	uint32_t *pSHCSR = (uint32_t *) 0xE000ED24;
-	*pSHCSR |= (1 << 16);		// mem manage fault
-	*pSHCSR |= (1 << 17);		// bus fault
-	*pSHCSR |= (1 << 18);		// usage fault
+    /*
+     * Enable configurable system fault handlers:
+     * - Memory Management Fault
+     * - Bus Fault
+     * - Usage Fault
+     */
+    SCB_SHCSR |= SCB_SHCSR_MEMFAULTENA | SCB_SHCSR_BUSFAULTENA | SCB_SHCSR_USGFAULTENA;
 
-	// *pSHCSR |= (0x7 << 16); // it enables all above mention three faults
 }
 
 void save_psp_value(uint32_t current_psp_val){
@@ -386,8 +392,8 @@ __attribute__((naked)) void switch_sp_to_psp(void){
 }
 
 void schedule(void){
-    // pend the PendSV exception
-    *pICSR |= (1 << 28);
+    /* Request PendSV for context switching */
+    SCB_ICSR = SCB_ICSR_PENDSVSET;
 }
 
 void task_delay(uint32_t tick_count){
