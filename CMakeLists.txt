@@ -46,6 +46,7 @@ set(sources_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/Src/led.c
 	${CMAKE_CURRENT_SOURCE_DIR}/Src/tasks.c
 	${CMAKE_CURRENT_SOURCE_DIR}/Src/faults.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Src/scheduler.c
 
 )
 

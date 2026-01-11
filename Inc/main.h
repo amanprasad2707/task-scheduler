@@ -6,8 +6,7 @@
 #include "mem_layout.h"
 #include "cpu_defs.h"
 #include "tasks.h"
-
-void task_delay(uint32_t tick_count);
+#include "scheduler.h"
 
 
 #endif /* MAIN_H_ */
