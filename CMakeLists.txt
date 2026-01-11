@@ -44,6 +44,9 @@ set(cpu_PARAMS
 set(sources_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/Src/main.c
 	${CMAKE_CURRENT_SOURCE_DIR}/Src/led.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Src/tasks.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Src/faults.c
+
 )
 
 # Include directories for all compilers

@@ -34,7 +34,7 @@ void schedule(void);
 void save_psp_value(uint32_t stack_addr);
 void update_next_task(void);
 
-void task_delay(uint32_t tick_count);
+
 
 int main(void){
 
@@ -58,53 +58,6 @@ int main(void){
 	for(;;);
 }
 
-void idle_task(void){
-    while(1);
-}
-
-void task1_handler(void){
-    while(1){
-        // printf("this is task 1\n");
-        led_on(LED_GREEN);
-        task_delay(1000);
-        led_off(LED_GREEN);
-        task_delay(1000);
-        
-    }
-}
-
-void task2_handler(void){
-    while(1){
-        // printf("this is task 2\n");
-        led_on(LED_ORANGE);
-        task_delay(500);
-        led_off(LED_ORANGE);
-        task_delay(500);
-}
-
-}
-
-void task3_handler(void){
-    while(1){
-        // printf("this is task 3\n");
-        led_on(LED_RED);
-        task_delay(250);
-        led_off(LED_RED);
-        task_delay(250);
-    }
-    
-}
-
-void task4_handler(void){
-    while(1){
-        // printf("this is task 4\n");
-        led_on(LED_BLUE);
-        task_delay(125);
-        led_off(LED_BLUE);
-        task_delay(125);
-    }
-    
-}
 
 
 void init_systick_timer(uint32_t tick_hz){
@@ -423,25 +376,3 @@ void task_delay(uint32_t tick_count){
     INTERRUPT_ENABLE();
 }
 
-
-
-/* fault handlers */
-void HardFault_Handler(void){
-	printf("Exception: Hard Fault\n");
-	while(1);
-}
-
-void MemManage_Handler(void){
-	printf("Exception: Memory Management Fault\n");
-	while(1);
-}
-
-void BusFault_Handler(void){
-	printf("Exception: Bus Fault\n");
-	while(1);
-}
-
-void UsageFault_Handler(void){
-    printf("Exception: Usage Fault");
-    while(1);
-}
