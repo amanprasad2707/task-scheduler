@@ -283,7 +283,7 @@ void init_task_stack(void){
 
         *(--pPSP) = DUMMY_XPSR;                              // xPSR (Thumb bit set)
         *(--pPSP) = ((uint32_t)user_tasks[i].task_handler) | 0x1; // PC (task entry, Thumb)
-        *(--pPSP) = 0xFFFFFFFD;                              // LR (EXC_RETURN → Thread, PSP)
+        *(--pPSP) = EXC_RETURN_THREAD_PSP_NOFP;              // LR (EXC_RETURN → Thread, PSP)
         *(--pPSP) = 0x00000000;                              // R12
         *(--pPSP) = 0x00000000;                              // R3
         *(--pPSP) = 0x00000000;                              // R2
