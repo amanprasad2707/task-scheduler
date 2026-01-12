@@ -14,9 +14,9 @@ typedef struct{
 TCB_t user_tasks[MAX_TASKS];
 
 
-/* ============================================================
+/* ------------------------------------------------------------
  * Tick handling
- * ============================================================ */
+ * ------------------------------------------------------------ */
 
 void update_global_tick_count(void){
     g_tick_count++;
@@ -41,9 +41,9 @@ void unblock_tasks(void){
 
 
 
-/* ============================================================
+/* ------------------------------------------------------------
  * SysTick ISR
- * ============================================================ */
+ * ------------------------------------------------------------ */
 
 void SysTick_Handler(void){
     update_global_tick_count();
@@ -52,9 +52,9 @@ void SysTick_Handler(void){
     schedule();
 }
 
-/* ============================================================
+/* ------------------------------------------------------------
  * PendSV ISR (context switch)
- * ============================================================ */
+ * ------------------------------------------------------------ */
 
 /*
  * PendSV_Handler
@@ -67,9 +67,9 @@ void SysTick_Handler(void){
  */
 __attribute__((naked)) void PendSV_Handler(void){
     __asm volatile(
-        /* ============================================================
+        /* ------------------------------------------------------------
          * Step 1: Save context of the currently running task (PSP)
-         * ============================================================ */
+         * ------------------------------------------------------------ */
 
         "MRS   R0, PSP        \n"   // store current running task PSP value into R0
         "STMDB R0!, {R4-R11}  \n"   // store R4-R11 register onto the stack
@@ -87,9 +87,9 @@ __attribute__((naked)) void PendSV_Handler(void){
 
         "MSR   PSP, R0        \n"   // update PSP to new top of stack
 
-        /* ============================================================
+        /* ------------------------------------------------------------
          * Step 2: Call scheduler functions (use MSP)
-         * ============================================================ */
+         * ------------------------------------------------------------ */
 
         /*
          * Protect LR (contains EXC_RETURN) and ensure a valid stack
@@ -114,9 +114,9 @@ __attribute__((naked)) void PendSV_Handler(void){
         /* Update PSP to point above the restored context */
         "MSR   PSP, R0        \n"
 
-        /* ============================================================
+        /* ------------------------------------------------------------
          * Step 4: Exception return
-         * ============================================================ */
+         * ------------------------------------------------------------ */
 
         /*
          * BX LR triggers exception return using EXC_RETURN.
@@ -129,9 +129,9 @@ __attribute__((naked)) void PendSV_Handler(void){
 }
 
 
-/* ============================================================
+/* ------------------------------------------------------------
  * Scheduler helpers
- * ============================================================ */
+ * ------------------------------------------------------------ */
 
 
 void save_psp_value(uint32_t current_psp_val){
@@ -169,9 +169,9 @@ void schedule(void){
 }
 
 
-/* ============================================================
+/* ------------------------------------------------------------
  * Task delay service
- * ============================================================ */
+ * ------------------------------------------------------------ */
 
 
 void task_delay(uint32_t tick_count){
@@ -201,9 +201,9 @@ void task_delay(uint32_t tick_count){
     INTERRUPT_ENABLE();
 }
 
-/* ============================================================
+/* ------------------------------------------------------------
  * Task stack initialization
- * ============================================================ */
+ * ------------------------------------------------------------ */
 
 
 void init_task_stack(void){
@@ -227,8 +227,7 @@ void init_task_stack(void){
     user_tasks[4].task_handler = task4_handler;
     user_tasks[4].psp_value    = T4_STACK_START;
 
-    for (int i = 0; i < MAX_TASKS; i++)
-    {
+    for (int i = 0; i < MAX_TASKS; i++){
         user_tasks[i].current_state = TASK_STATE_READY;
     }
 
@@ -270,3 +269,82 @@ void init_task_stack(void){
         user_tasks[i].psp_value = (uint32_t)pPSP;
     }
 }
+
+
+void init_systick_timer(uint32_t tick_hz){
+    uint32_t reload;
+
+    /* Calculate reload value */
+    reload = (SYSTICK_TIM_CLK / tick_hz) - 1U;
+
+    /* Load reload value */
+    SYST_RVR = reload;
+
+    /* Clear current value register */
+    SYST_CVR = 0U;
+
+    /* Configure and start SysTick
+     * - Processor clock
+     * - Enable SysTick interrupt
+     * - Enable SysTick counter
+     */
+    SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_TICKINT  | SYST_CSR_ENABLE;
+}
+
+
+// This is a naked function so no prologue and epilogue. That's why we have to write this
+__attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack){
+    __asm volatile("MSR MSP, %0" :: "r" (sched_top_of_stack) : );
+    __asm volatile("BX LR");  // this copies the value of LR into PC
+
+}
+
+
+
+
+
+__attribute__((naked)) void switch_sp_to_psp(void){
+    /* ------------------------------------------------------------
+     * Step 1: Preserve LR (return address to main)
+     * ------------------------------------------------------------ */
+
+        /*
+         * BL instructions overwrite LR.
+         * Save LR on MSP so we can return to main safely.
+         */
+
+    __asm volatile("PUSH {LR}");
+
+    /* ------------------------------------------------------------
+     * Step 2: Load PSP value of the current task
+     * ------------------------------------------------------------ */
+    /*
+     * get_psp_value() returns the PSP of the current task in R0
+     * as per ARM Procedure Call Standard (AAPCS). */
+    __asm volatile("BL get_psp_value");
+    
+
+    /* Initialize PSP with the task's stack pointer */
+    __asm volatile("MSR PSP, R0");
+
+    /* ------------------------------------------------------------
+     * Step 3: Restore LR
+     * ------------------------------------------------------------ */
+    __asm volatile("POP {LR}");
+    
+    /* ------------------------------------------------------------
+     * Step 4: Switch thread mode stack from MSP to PSP
+     * ------------------------------------------------------------ */
+
+    /* 
+     * CONTROL[1] = 1 → Use PSP in thread mode
+     * CONTROL[0] = 0 → Remain in privileged mode */
+    
+    __asm volatile("MOV R0, #0x02");
+    __asm volatile("MSR CONTROL, R0");
+
+     /* Return to main using preserved LR */
+    __asm volatile("BX LR");
+
+}
+

@@ -1,4 +1,17 @@
 #include <stdio.h>
+#include "regs.h"
+
+void enable_processor_faults(void){
+    /*
+     * Enable configurable system fault handlers:
+     * - Memory Management Fault
+     * - Bus Fault
+     * - Usage Fault
+     */
+    SCB_SHCSR |= SCB_SHCSR_MEMFAULTENA | SCB_SHCSR_BUSFAULTENA | SCB_SHCSR_USGFAULTENA;
+
+}
+
 
 /* Fault Handlers */
 
