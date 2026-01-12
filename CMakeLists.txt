@@ -35,9 +35,8 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 # Core MCU flags, CPU type, instruction set and FPU setup
 set(cpu_PARAMS 
-    # Other parameters
-    # -mthumb
-    # -mcpu, -mfloat, -mfloat-abi, ...
+    -mcpu=cortex-m4
+    -mthumb
 )
 
 # Sources
