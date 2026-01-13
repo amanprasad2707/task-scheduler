@@ -32,7 +32,7 @@ void unblock_tasks(void){
             continue;
         }
 
-        /* Check if the delay period has expired (overflow save) */
+        /* Check if the delay period has expired (overflow safe) */
         if ((int32_t)(g_tick_count - user_tasks[i].block_count) >= 0){
             user_tasks[i].current_state = TASK_STATE_READY;
         }
@@ -244,6 +244,8 @@ void init_task_stack(void){
 
         /* ------------------------------------------------------------
          * Hardware-stacked frame (auto-popped by CPU)
+         * Cortex-M uses a full-descending stack
+         * SP points to the last valid word, so we decrement first, then write.
          * Order is IMPORTANT
          * ------------------------------------------------------------ */
 
@@ -294,7 +296,7 @@ void init_systick_timer(uint32_t tick_hz){
 
 // This is a naked function so no prologue and epilogue. That's why we have to write this
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack){
-    __asm volatile("MSR MSP, R0");
+    __asm volatile("MSR MSP, R0");  // sched_top_of_stack is in R0 due to AAPCS rule: first function argument → R0
     __asm volatile("BX LR");  // this copies the value of LR into PC
 
 }
