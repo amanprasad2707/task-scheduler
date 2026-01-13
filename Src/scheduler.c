@@ -294,7 +294,7 @@ void init_systick_timer(uint32_t tick_hz){
 
 // This is a naked function so no prologue and epilogue. That's why we have to write this
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack){
-    __asm volatile("MSR MSP, %0" :: "r" (sched_top_of_stack) : );
+    __asm volatile("MSR MSP, R0");
     __asm volatile("BX LR");  // this copies the value of LR into PC
 
 }
