@@ -1,17 +1,29 @@
 #include "main.h"
+#include "sched_defs.h"
 #include "scheduler.h"
 /* denotes the current task which is running in the CPU */
 uint8_t current_task = 1; // task 1 is running
 uint32_t g_tick_count = 0;
 
-typedef struct{
-    uint32_t psp_value;
-    uint32_t block_count;
-    uint8_t current_state;
-    void (* task_handler)(void);    // function pointer to hold the task handler address
-}TCB_t;
 
 TCB_t user_tasks[MAX_TASKS];
+sched_algo_t active_scheduler = SCHED_RR;
+
+
+/* ------------------------------------------------------------
+ *             Scheduler policy selection helpers
+ * -----------------------------------------------------------
+ * 
+ * These functions implement task-selection logic for different
+ * scheduling policies (Round-Robin, Priority).
+ * They do NOT perform context switching.
+ * They only select the index of the next READY task.
+ * Task index 0 is reserved for the idle task and is selected
+ * only if no user task is READY.
+ * ------------------------------------------------------------ */
+
+static uint8_t sched_rr_select_next_task(void);
+static uint8_t sched_priority_select_next_task(void);
 
 
 /* ------------------------------------------------------------
@@ -139,20 +151,19 @@ void save_psp_value(uint32_t current_psp_val){
 }
 
 void update_next_task(void){
-    int state = TASK_STATE_BLOCKED;
+    switch (active_scheduler)
+    {
+    case SCHED_RR:
+        current_task = sched_rr_select_next_task();
+        break;
 
-    for (int i = 0; i < MAX_TASKS; i++){
-        current_task++;
-        current_task %= MAX_TASKS;
-        state = user_tasks[current_task].current_state;
-
-        if((state == TASK_STATE_READY) && (current_task != 0)){
-            break;
-        }
-    }
-
-    if(state != TASK_STATE_READY){
+    case SCHED_PRIORITY:
+        current_task = sched_priority_select_next_task();
+        break;
+    
+    default:
         current_task = 0;
+        break;
     }
     
 }
@@ -214,18 +225,23 @@ void init_task_stack(void){
 
     user_tasks[0].task_handler = idle_task;
     user_tasks[0].psp_value    = IDLE_STACK_START;
+    user_tasks[0].priority     = TASK_PRIORITY_IDLE; // task zero is idle task
 
     user_tasks[1].task_handler = task1_handler;
     user_tasks[1].psp_value    = T1_STACK_START;
-
+    user_tasks[1].priority     = TASK_PRIORITY_HIGH;
+    
     user_tasks[2].task_handler = task2_handler;
     user_tasks[2].psp_value    = T2_STACK_START;
-
+    user_tasks[2].priority     = TASK_PRIORITY_HIGH;
+    
     user_tasks[3].task_handler = task3_handler;
     user_tasks[3].psp_value    = T3_STACK_START;
-
+    user_tasks[3].priority     = TASK_PRIORITY_HIGH;
+    
     user_tasks[4].task_handler = task4_handler;
     user_tasks[4].psp_value    = T4_STACK_START;
+    user_tasks[4].priority     = TASK_PRIORITY_HIGH;
 
     for (int i = 0; i < MAX_TASKS; i++){
         user_tasks[i].current_state = TASK_STATE_READY;
@@ -350,3 +366,46 @@ __attribute__((naked)) void switch_sp_to_psp(void){
 
 }
 
+
+/*
+    * ---------------------------------------------------
+    *               Scheduling Algorithms
+    * ---------------------------------------------------
+*/
+
+
+/*
+ * Round-robin scheduling policy:
+ * Selects the next READY task in cyclic order.
+ * Task 0 (idle) is selected only if no user task is READY.
+ */
+static uint8_t sched_rr_select_next_task(void){
+    task_state_t state = TASK_STATE_BLOCKED;
+
+    for (int i = 0; i < MAX_TASKS; i++){
+        current_task++;
+        current_task %= MAX_TASKS;
+        state = user_tasks[current_task].current_state;
+
+        if((state == TASK_STATE_READY) && (current_task != 0)){
+            return current_task;
+        }
+    }
+    return 0; // idle task
+}
+
+
+static uint8_t sched_priority_select_next_task(void){
+    uint8_t selected = 0; // idle task by default
+    task_priority_t best_prio = TASK_PRIORITY_IDLE;
+
+    for (int i = 1; i < MAX_TASKS; i++){
+        if(user_tasks[i].current_state == TASK_STATE_READY){
+            if(user_tasks[i].priority <= best_prio){
+                best_prio = user_tasks[i].priority;
+                selected = i;
+            }
+        }
+    }
+    return selected;
+}

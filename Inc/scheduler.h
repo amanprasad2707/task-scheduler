@@ -24,8 +24,6 @@ __attribute__((naked)) void switch_sp_to_psp(void);
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack);
 
 
-void save_psp_value(uint32_t stack_addr);
-void update_next_task(void);
 
 
 
