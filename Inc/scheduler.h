@@ -23,7 +23,7 @@ uint32_t get_psp_value(void);
 __attribute__((naked)) void switch_sp_to_psp(void);
 __attribute__((naked)) void init_scheduler_stack(uint32_t sched_top_of_stack);
 
-
+void task_set_priority(uint8_t task, task_priority_t task_priority);
 
 
 

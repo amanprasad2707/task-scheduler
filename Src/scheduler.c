@@ -1,3 +1,4 @@
+#include "cpu_defs.h"
 #include "main.h"
 #include "sched_defs.h"
 #include "scheduler.h"
@@ -7,7 +8,7 @@ uint32_t g_tick_count = 0;
 
 
 TCB_t user_tasks[MAX_TASKS];
-sched_algo_t active_scheduler = SCHED_RR;
+sched_algo_t active_scheduler = SCHED_PRIORITY;
 
 
 /* ------------------------------------------------------------
@@ -366,6 +367,11 @@ __attribute__((naked)) void switch_sp_to_psp(void){
 
 }
 
+void task_set_priority(uint8_t task, task_priority_t task_priority){
+    INTERRUPT_DISABLE();
+    user_tasks[task].priority = task_priority;
+    INTERRUPT_ENABLE();
+}
 
 /*
     * ---------------------------------------------------

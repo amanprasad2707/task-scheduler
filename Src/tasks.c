@@ -8,6 +8,7 @@ void idle_task(void){
 void task1_handler(void){
     while(1){
         // printf("this is task 1\n");
+        task_set_priority(1, TASK_PRIORITY_HIGH);
         led_on(LED_GREEN);
         task_delay(1000);
         led_off(LED_GREEN);
