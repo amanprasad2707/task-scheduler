@@ -2,7 +2,7 @@
 #define TASKS_H
 
 #include <stdint.h>
-
+#define RTOS_HEAP_SIZE  (8 * 1024)   // 8 KB total heap
 
 
 /* Task function type */
