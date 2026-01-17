@@ -1,5 +1,6 @@
 #include "cpu_defs.h"
-#include "main.h"
+#include "tasks.h"
+#include "regs.h"
 #include "sched_defs.h"
 #include "scheduler.h"
 /* denotes the current task which is running in the CPU */
@@ -7,7 +8,7 @@ uint8_t current_task = 1; // task 1 is running
 uint32_t g_tick_count = 0;
 
 
-TCB_t user_tasks[MAX_TASKS];
+extern TCB_t tcb_pool[MAX_TASKS];
 sched_algo_t active_scheduler = SCHED_PRIORITY;
 
 
@@ -41,13 +42,13 @@ void unblock_tasks(void){
     for (int i = 1; i < MAX_TASKS; i++){
 
         /* Only blocked tasks can be unblocked */
-        if (user_tasks[i].current_state != TASK_STATE_BLOCKED){
+        if (tcb_pool[i].state != TASK_STATE_BLOCKED){
             continue;
         }
 
         /* Check if the delay period has expired (overflow safe) */
-        if ((int32_t)(g_tick_count - user_tasks[i].block_count) >= 0){
-            user_tasks[i].current_state = TASK_STATE_READY;
+        if ((int32_t)(g_tick_count - tcb_pool[i].block_count) >= 0){
+            tcb_pool[i].state = TASK_STATE_READY;
         }
     }
 }
@@ -148,7 +149,7 @@ __attribute__((naked)) void PendSV_Handler(void){
 
 
 void save_psp_value(uint32_t current_psp_val){
-    user_tasks[current_task].psp_value = current_psp_val;
+    tcb_pool[current_task].psp = (uint32_t *)current_psp_val;
 }
 
 void update_next_task(void){
@@ -172,7 +173,7 @@ void update_next_task(void){
 
 uint32_t get_psp_value(void){
 
-    return user_tasks[current_task].psp_value;
+    return (uint32_t)tcb_pool[current_task].psp;
 }
 
 void schedule(void){
@@ -205,89 +206,14 @@ void task_delay(uint32_t tick_count){
      * (int32_t)(g_tick_count - block_count) >= 0 */
 
     if(current_task){  // task 0 = idle task
-        user_tasks[current_task].block_count = g_tick_count + tick_count;
-        user_tasks[current_task].current_state = TASK_STATE_BLOCKED;
+        tcb_pool[current_task].block_count = g_tick_count + tick_count;
+        tcb_pool[current_task].state = TASK_STATE_BLOCKED;
         schedule();
     }
 
     INTERRUPT_ENABLE();
 }
 
-/* ------------------------------------------------------------
- * Task stack initialization
- * ------------------------------------------------------------ */
-
-
-void init_task_stack(void){
-    /* ------------------------------------------------------------
-     * Step 1: Initialize task states, stack start addresses,
-     *         and task entry functions
-     * ------------------------------------------------------------ */
-
-    user_tasks[0].task_handler = idle_task;
-    user_tasks[0].psp_value    = IDLE_STACK_START;
-    user_tasks[0].priority     = TASK_PRIORITY_IDLE; // task zero is idle task
-
-    user_tasks[1].task_handler = task1_handler;
-    user_tasks[1].psp_value    = T1_STACK_START;
-    user_tasks[1].priority     = TASK_PRIORITY_HIGH;
-    
-    user_tasks[2].task_handler = task2_handler;
-    user_tasks[2].psp_value    = T2_STACK_START;
-    user_tasks[2].priority     = TASK_PRIORITY_HIGH;
-    
-    user_tasks[3].task_handler = task3_handler;
-    user_tasks[3].psp_value    = T3_STACK_START;
-    user_tasks[3].priority     = TASK_PRIORITY_HIGH;
-    
-    user_tasks[4].task_handler = task4_handler;
-    user_tasks[4].psp_value    = T4_STACK_START;
-    user_tasks[4].priority     = TASK_PRIORITY_HIGH;
-
-    for (int i = 0; i < MAX_TASKS; i++){
-        user_tasks[i].current_state = TASK_STATE_READY;
-    }
-
-    /* ------------------------------------------------------------
-     * Step 2: Build initial stack frame for each task
-     * Stack layout must match what the Cortex-M CPU expects on exception return.
-     * ------------------------------------------------------------ */
-    
-    for (int i = 0; i < MAX_TASKS; i++){
-        uint32_t *pPSP = (uint32_t *)user_tasks[i].psp_value;
-
-        /* Ensure 8-byte stack alignment (ARM requirement) */
-        pPSP = (uint32_t *)((uint32_t)pPSP & ~0x7);
-
-        /* ------------------------------------------------------------
-         * Hardware-stacked frame (auto-popped by CPU)
-         * Cortex-M uses a full-descending stack
-         * SP points to the last valid word, so we decrement first, then write.
-         * Order is IMPORTANT
-         * ------------------------------------------------------------ */
-
-        *(--pPSP) = DUMMY_XPSR;                              // xPSR (Thumb bit set)
-        *(--pPSP) = ((uint32_t)user_tasks[i].task_handler) | 0x1; // PC (task entry, Thumb)
-        *(--pPSP) = EXC_RETURN_THREAD_PSP_NOFP;              // LR (EXC_RETURN → Thread, PSP)
-        *(--pPSP) = 0x00000000;                              // R12
-        *(--pPSP) = 0x00000000;                              // R3
-        *(--pPSP) = 0x00000000;                              // R2
-        *(--pPSP) = 0x00000000;                              // R1
-        *(--pPSP) = 0x00000000;                              // R0
-
-        /* ------------------------------------------------------------
-         * Software-stacked frame (saved/restored in PendSV)
-         * R4–R11 (callee-saved registers)
-         * ------------------------------------------------------------ */
-
-        for (int r = 0; r < 8; r++){
-            *(--pPSP) = 0x00000000;   // R4–R11
-        }
-
-        /* Save the prepared PSP back into the TCB */
-        user_tasks[i].psp_value = (uint32_t)pPSP;
-    }
-}
 
 
 void init_systick_timer(uint32_t tick_hz){
@@ -369,7 +295,7 @@ __attribute__((naked)) void switch_sp_to_psp(void){
 
 void task_set_priority(uint8_t task, task_priority_t task_priority){
     INTERRUPT_DISABLE();
-    user_tasks[task].priority = task_priority;
+    tcb_pool[task].priority = task_priority;
     INTERRUPT_ENABLE();
 }
 
@@ -391,7 +317,7 @@ static uint8_t sched_rr_select_next_task(void){
     for (int i = 0; i < MAX_TASKS; i++){
         current_task++;
         current_task %= MAX_TASKS;
-        state = user_tasks[current_task].current_state;
+        state = tcb_pool[current_task].state;
 
         if((state == TASK_STATE_READY) && (current_task != 0)){
             return current_task;
@@ -406,9 +332,9 @@ static uint8_t sched_priority_select_next_task(void){
     task_priority_t best_prio = TASK_PRIORITY_IDLE;
 
     for (int i = 1; i < MAX_TASKS; i++){
-        if(user_tasks[i].current_state == TASK_STATE_READY){
-            if(user_tasks[i].priority <= best_prio){
-                best_prio = user_tasks[i].priority;
+        if(tcb_pool[i].state == TASK_STATE_READY){
+            if(tcb_pool[i].priority <= best_prio){
+                best_prio = tcb_pool[i].priority;
                 selected = i;
             }
         }

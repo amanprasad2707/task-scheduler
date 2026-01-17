@@ -7,7 +7,6 @@ int main(void){
 
     init_scheduler_stack(SCHED_STACK_START);
 
-    init_task_stack();
 
     led_init_all();
 
@@ -15,8 +14,6 @@ int main(void){
 
     switch_sp_to_psp();
 
-    // this task is run with PSP as stack pointer
-    task1_handler();
 
 
     /* Loop forever */

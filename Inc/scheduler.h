@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 /* Scheduler core */
-void init_task_stack(void);
 void schedule(void);
 
 /* Tick handling */
