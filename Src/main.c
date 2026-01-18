@@ -50,19 +50,23 @@ int main(void){
     enable_processor_faults();
 
     init_scheduler_stack(SCHED_STACK_START);
+    SCB_SHPR3 |= (0xFF << 16);  // PendSV lowest priority
+    SCB_SHPR3 |= (0xFE << 24);  // SysTick just above PendSV
 
-
+    task_init();
     led_init_all();
 
-    task_create(idle_task, NULL, 256, TASK_PRIORITY_IDLE);
+    task_create_idle(idle_task, NULL, 256);
     task_create(green_task, NULL, 512, TASK_PRIORITY_MEDIUM);
     task_create(blue_task, NULL, 512, TASK_PRIORITY_MEDIUM);
     task_create(red_task, NULL, 512, TASK_PRIORITY_MEDIUM);
     task_create(orange_task, NULL, 512, TASK_PRIORITY_MEDIUM);
 
     init_systick_timer(TICK_HZ);
+    INTERRUPT_ENABLE();
 
-    switch_sp_to_psp();
+    /* start the scheduler */
+    scheduler_start();
 
 
 

@@ -5,6 +5,8 @@
 
 /* Scheduler core */
 void schedule(void);
+void scheduler_start(void);
+
 
 /* Tick handling */
 void update_global_tick_count(void);

@@ -90,3 +90,34 @@ int task_create(void (*task_fn)(void *), void *arg, uint32_t stack_size_bytes, t
     
 }
 
+
+int task_create_idle(void (*task_fn)(void *), void *arg, uint32_t stack_size_bytes){
+    if (!task_fn || stack_size_bytes < 64){
+        return -1;
+    }
+
+    INTERRUPT_DISABLE();
+
+    TCB_t *tcb = &tcb_pool[0];
+    
+    uint8_t *stack = alloc_stack(stack_size_bytes);
+    if(!stack){
+        INTERRUPT_ENABLE();
+        return -1;
+    }
+
+    tcb->stack_base = stack;
+    tcb->stack_size = stack_size_bytes;
+    tcb->priority = TASK_PRIORITY_IDLE;
+    tcb->entry = task_fn;
+    tcb->arg = arg;
+    tcb->state = TASK_STATE_READY;
+    tcb->block_count = 0;
+
+    tcb->psp = build_initial_stack(stack, stack_size_bytes, task_fn, arg);
+
+    INTERRUPT_ENABLE();
+
+    return 0;
+}
+

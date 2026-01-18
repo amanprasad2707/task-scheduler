@@ -53,6 +53,12 @@ int task_create(
     task_priority_t priority   // HOW important
 );
 
+int task_create_idle(
+    void (*task_fn)(void *),   // WHAT runs (idle task)
+    void *arg,                 // WITH what data
+    uint32_t stack_size_bytes  // HOW MUCH stack
+);
 
+void task_init(void);
 
 #endif

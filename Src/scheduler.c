@@ -4,7 +4,7 @@
 #include "sched_defs.h"
 #include "scheduler.h"
 /* denotes the current task which is running in the CPU */
-uint8_t current_task = 1; // task 1 is running
+uint8_t current_task = 0; // must start from IDLE
 uint32_t g_tick_count = 0;
 
 
@@ -53,6 +53,33 @@ void unblock_tasks(void){
     }
 }
 
+
+__attribute__((naked)) void scheduler_start(void){
+
+    __asm volatile(
+        "CPSID I              \n" /* Disable interrupts */
+        /* Get first task PSP */
+        "BL    update_next_task \n"
+        "BL    get_psp_value    \n"
+
+        /* Restore software context (R4-R11) */
+        "LDMIA R0!, {R4-R11}  \n"
+
+        /* Load PSP of selected task and switch to PSP */
+        "MSR   PSP, R0          \n"
+        "MOV   R0, #0x02        \n"
+        "MSR   CONTROL, R0      \n"
+        "ISB                    \n"
+
+        /* Restore hardware context and jump to task */
+        "POP   {R0-R3, R12, LR} \n"
+        "CPSIE I                \n" /* Enable interrupts */
+        "POP   {PC}             \n"
+        :
+        :
+        : "memory"
+    );
+}
 
 
 /* ------------------------------------------------------------
