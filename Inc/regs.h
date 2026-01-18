@@ -24,7 +24,7 @@
 /* -------------------- SCB -------------------- */
 #define SCB_ICSR      (*(volatile uint32_t*)0xE000ED04U)
 #define SCB_SHCSR     (*(volatile uint32_t*)0xE000ED24U)
-
+#define SCB_SHPR3     (*(volatile uint32_t*)0xE000ED20U)
 
 /* ICSR bit definitions*/
 #define SCB_ICSR_PENDSVSET      (1U << 28)
