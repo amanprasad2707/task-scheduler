@@ -1,7 +1,6 @@
 #include "cpu_defs.h"
 #include "tasks.h"
 #include "regs.h"
-#include "sched_defs.h"
 #include "scheduler.h"
 /* denotes the current task which is running in the CPU */
 uint8_t current_task = 0; // must start from IDLE

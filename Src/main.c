@@ -1,7 +1,4 @@
 #include "main.h"
-#include "led.h"
-#include "scheduler.h"
-#include "tasks.h"
 
 
 void idle_task(void *arg){
@@ -50,8 +47,6 @@ int main(void){
     enable_processor_faults();
 
     init_scheduler_stack(SCHED_STACK_START);
-    SCB_SHPR3 |= (0xFF << 16);  // PendSV lowest priority
-    SCB_SHPR3 |= (0xFE << 24);  // SysTick just above PendSV
 
     task_init();
     led_init_all();

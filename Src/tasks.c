@@ -2,7 +2,6 @@
 #include "cpu_defs.h"
 #include "led.h"
 #include "main.h"
-#include "sched_defs.h"
 
 
 static uint8_t rtos_heap[RTOS_HEAP_SIZE];

@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #include "regs.h"
-#include "sched_defs.h"
 #include "mem_layout.h"
 #include "cpu_defs.h"
 #include "tasks.h"
