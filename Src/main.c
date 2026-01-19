@@ -46,8 +46,6 @@ int main(void){
 
     enable_processor_faults();
 
-    init_scheduler_stack(SCHED_STACK_START);
-
     task_init();
     led_init_all();
 
@@ -58,7 +56,6 @@ int main(void){
     task_create(orange_task, NULL, 512, TASK_PRIORITY_MEDIUM);
 
     init_systick_timer(TICK_HZ);
-    INTERRUPT_ENABLE();
 
     /* start the scheduler */
     scheduler_start();
@@ -68,5 +65,3 @@ int main(void){
     /* Loop forever */
 	for(;;);
 }
-
-
