@@ -1,43 +1,38 @@
-# Round-Robin Task Scheduler
+# STM32 Simple Task Scheduler
 
 ## Overview
-This project is a custom implementation of a preemptive task scheduler for the STM32F407 microcontroller (Cortex-M4). It demonstrates the fundamentals of Real-Time Operating System (RTOS) development, including context switching, stack pointer manipulation (MSP vs. PSP), and SysTick-based time management.
+This project is a lightweight, preemptive task scheduler for the STM32F407 microcontroller (Cortex-M4). It demonstrates the fundamentals of RTOS development, focusing on context switching and basic scheduling logic without complex memory protection or dynamic allocation overhead.
 
 ## Features
-- **Round-Robin Scheduling**: Cycles through multiple user tasks.
-- **Context Switching**: Implemented in assembly using the `PendSV` exception.
-- **Stack Isolation**:
-  - **Kernel/Handlers**: Run on the Main Stack Pointer (MSP).
-  - **User Tasks**: Run on the Process Stack Pointer (PSP).
-- **Task Management**:
-  - Task States: Ready, Blocked.
-  - `task_delay()`: Non-blocking delay (blocks the task, yields CPU).
-- **Fault Handling**: Implemented handlers for HardFault, MemManage, BusFault, and UsageFault.
-- **ITM Debugging**: `printf` retargeted to ITM Port 0 for SWO debugging.
+- **Preemptive Multitasking**: Uses the SysTick timer to switch between tasks.
+- **Scheduling Algorithms**: Supports **Round-Robin** and **Priority-based** scheduling.
+- **Context Switching**: Manually saves and restores CPU registers (R4-R11) using the `PendSV` exception.
+- **Dual Stack Architecture**:
+  - **MSP (Main Stack Pointer)**: Used by the kernel and ISRs.
+  - **PSP (Process Stack Pointer)**: Used by user tasks.
+- **Task API**: Simple functions to create tasks (`task_create`) and delay execution (`task_delay`).
+- **Debug Support**: `printf` output redirected to ITM (SWO) for debugging.
 
 ## Hardware Support
-- **Target MCU**: STM32F407VGT6
-- **Board**: STM32F407 Discovery Board (or compatible)
-- **Peripherals Used**:
-  - **SysTick**: System heartbeat and scheduler tick.
-  - **GPIO (Port D)**: LEDs for visual task indication.
+- **MCU**: STM32F407VGT6
+- **Board**: STM32F4 Discovery
+- **Peripherals**: SysTick (Scheduler Tick), GPIO Port D (LEDs).
 
 ## Project Structure
 ```text
 .
 ├── CMakeLists.txt       # CMake build configuration
 ├── Inc/                 # Header files
-│   ├── cpu_defs.h       # CPU specific register definitions
-│   ├── mem_layout.h     # SRAM stack layout definitions
 │   ├── scheduler.h      # Scheduler API
+│   ├── tasks.h          # Task creation and TCB definitions
 │   └── ...
 ├── Src/                 # Source files
 │   ├── main.c           # Entry point
 │   ├── scheduler.c      # Core scheduler logic (PendSV, SysTick)
 │   ├── tasks.c          # User task implementations
-│   ├── faults.c         # Fault handlers
+│   ├── led.c            # GPIO driver for board LEDs
+│   ├── syscall.c        # Newlib syscalls (ITM _write implementation)
 │   └── ...
-
 ```
 
 ## Prerequisites
@@ -89,9 +84,9 @@ The SRAM is divided to support multiple stacks:
 Context switching is handled by the `PendSV_Handler` in `Src/scheduler.c`.
 1. **Save Context**: Pushes R4-R11 onto the current task's stack (PSP).
 2. **Save PSP**: Updates the Task Control Block (TCB) with the new PSP.
-3. **Select Next Task**: Round-robin logic selects the next READY task.
+3. **Select Next Task**: The scheduler selects the next READY task based on the active policy (Priority or Round-Robin).
 4. **Restore Context**: Loads the new task's PSP and pops R4-R11.
 5. **Return**: `BX LR` returns to Thread Mode using the new PSP.
 
 ### Task Configuration
-Tasks are defined in `Src/tasks.c`. Currently, 4 tasks are configured to toggle LEDs (Green, Orange, Red, Blue) with different delay intervals.
+Tasks are initialized in `Src/main.c`. Currently, 4 tasks are configured to toggle LEDs (Green, Orange, Red, Blue) with different delay intervals and priority levels.
