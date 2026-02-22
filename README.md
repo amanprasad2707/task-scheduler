@@ -10,7 +10,7 @@ This project is a lightweight, preemptive task scheduler for the STM32F407 micro
 - **Dual Stack Architecture**:
   - **MSP (Main Stack Pointer)**: Used by the kernel and ISRs.
   - **PSP (Process Stack Pointer)**: Used by user tasks.
-- **Task API**: Simple functions to create tasks (`task_create`) and delay execution (`task_delay`).
+ - **Task API**: Simple functions to create tasks (`task_create`, `task_create_idle`) and delay execution (`task_delay`).
 - **Debug Support**: `printf` output redirected to ITM (SWO) for debugging.
 
 ## Hardware Support
@@ -29,9 +29,9 @@ This project is a lightweight, preemptive task scheduler for the STM32F407 micro
 ├── Src/                 # Source files
 │   ├── main.c           # Entry point
 │   ├── scheduler.c      # Core scheduler logic (PendSV, SysTick)
-│   ├── tasks.c          # User task implementations
+│   ├── tasks.c          # Task creation and management
 │   ├── led.c            # GPIO driver for board LEDs
-│   ├── syscall.c        # Newlib syscalls (ITM _write implementation)
+│   ├── faults.c         # Processor fault handlers
 │   └── ...
 ```
 
@@ -88,5 +88,9 @@ Context switching is handled by the `PendSV_Handler` in `Src/scheduler.c`.
 4. **Restore Context**: Loads the new task's PSP and pops R4-R11.
 5. **Return**: `BX LR` returns to Thread Mode using the new PSP.
 
-### Task Configuration
-Tasks are initialized in `Src/main.c`. Currently, 4 tasks are configured to toggle LEDs (Green, Orange, Red, Blue) with different delay intervals and priority levels.
+### Usage
+1. **Create Idle Task**: Call `task_create_idle()` to register the idle task.
+2. **Create User Tasks**: Call `task_create()` for each user task.
+3. **Start Scheduler**: Call `scheduler_start()` to start multitasking.
+
+See `Src/main.c` for the full initialization example.

@@ -35,6 +35,8 @@ static uint32_t *build_initial_stack(uint8_t *stack_base, uint32_t stack_size, t
     /* 8-byte alignment (ABI requiremnt) */
     pPSP = (uint32_t *) ((uint32_t)pPSP & ~0x7);
 
+    /* Cortex-M uses a full-descending stack so we first need to decrement the pointer the updates the value */
+
     *(--pPSP) = DUMMY_XPSR;                     // xPSR
     *(--pPSP) = ((uint32_t)entry) | 1;          // PC
     *(--pPSP) = EXC_RETURN_THREAD_PSP_NOFP;     // LR (EXC_RETURN, PSP)
@@ -86,7 +88,6 @@ int task_create(void (*task_fn)(void *), void *arg, uint32_t stack_size_bytes, t
     }
     INTERRUPT_ENABLE();
     return -1;
-    
 }
 
 
